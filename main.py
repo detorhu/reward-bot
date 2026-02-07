@@ -118,14 +118,49 @@ async def balance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def reward_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await reward(update, context)
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+    user = get_user(uid)
+
+    if user["points"] < MIN_REWARD_POINTS:
+        await q.message.reply_text("❌ Minimum 100 points required.")
+        return
+
+    users.update_one({"_id": uid}, {"$inc": {"points": -MIN_REWARD_POINTS}})
+    rewards.insert_one({
+        "user_id": uid,
+        "amount": 50,
+        "time": time.time(),
+        "status": "pending"
+    })
+
+    await q.message.reply_text("✅ Reward request submitted.")
+
+    await context.bot.send_message(
+        ADMIN_ID,
+        f"💸 *Reward Request*\nUser: `{uid}`\nAmount: ₹50",
+        parse_mode="Markdown"
+    )
 
 
 async def premium_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await premium(update, context)
+    q = update.callback_query
+    await q.answer()
+    await q.message.reply_text(
+        "💎 *Premium Plan*\n\n"
+        "✔️ 2x referral points\n"
+        "✔️ Faster rewards\n"
+        "✔️ Premium bot access\n\n"
+        "Price: ₹199 / month",
+        parse_mode="Markdown"
+    )
 
 
 async def redeem_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
     await redeem(update, context)
 # ==========================================
 
@@ -180,57 +215,6 @@ async def redeem_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==========================================
 
 
-# ================= CASH REWARD =============
-async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
-    user = get_user(uid)
-
-    if user["points"] < MIN_REWARD_POINTS:
-        await update.message.reply_text("❌ Minimum 100 points required.")
-        return
-
-    users.update_one({"_id": uid}, {"$inc": {"points": -MIN_REWARD_POINTS}})
-    rewards.insert_one({
-        "user_id": uid,
-        "amount": 50,
-        "time": time.time(),
-        "status": "pending"
-    })
-
-    await update.message.reply_text("✅ Reward request submitted.")
-
-    await context.bot.send_message(
-        ADMIN_ID,
-        f"💸 *Reward Request*\nUser: `{uid}`\nAmount: ₹50",
-        parse_mode="Markdown"
-    )
-# ==========================================
-
-
-# ================= PREMIUM =================
-async def premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "💎 *Premium Plan*\n\n"
-        "✔️ 2x referral points\n"
-        "✔️ Faster rewards\n"
-        "✔️ Premium bot access\n\n"
-        "Price: ₹199 / month",
-        parse_mode="Markdown"
-    )
-# ==========================================
-
-
-# ================= STATS ===================
-async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return
-    await update.message.reply_text(
-        f"👥 Users: {users.count_documents({})}\n"
-        f"🟡 Pending rewards: {rewards.count_documents({'status':'pending'})}"
-    )
-# ==========================================
-
-
 # ================= MAIN ====================
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -245,10 +229,6 @@ app.add_handler(CallbackQueryHandler(redeem_button, pattern="^btn_redeem$"))
 app.add_handler(CallbackQueryHandler(reward_button, pattern="^btn_reward$"))
 app.add_handler(CallbackQueryHandler(premium_button, pattern="^btn_premium$"))
 app.add_handler(CallbackQueryHandler(redeem_callback, pattern="^redeem_"))
-
-app.add_handler(CommandHandler("reward", reward))
-app.add_handler(CommandHandler("premium", premium))
-app.add_handler(CommandHandler("stats", stats))
 
 print("✅ Reward Bot with MongoDB Running")
 app.run_polling()
