@@ -8,7 +8,7 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if not db:
+    if db is None:
         await q.message.edit_text("❌ Database connection error.")
         return
 
@@ -21,10 +21,9 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     total_orders = orders.count_documents({"user": q.from_user.id})
-    completed_orders = orders.count_documents({
-        "user": q.from_user.id,
-        "status": "delivered"
-    })
+    completed_orders = orders.count_documents(
+        {"user": q.from_user.id, "status": "delivered"}
+    )
 
     joined_time = user.get("joined", time.time())
     joined_date = time.strftime("%d %b %Y", time.localtime(joined_time))
@@ -58,20 +57,17 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if not db:
+    if db is None:
         await q.message.edit_text("❌ Database error.")
         return
 
     orders = db.orders
-
-    user_orders = orders.find(
-        {"user": q.from_user.id}
-    ).sort("_id", -1).limit(10)
+    cursor = orders.find({"user": q.from_user.id}).sort("_id", -1).limit(10)
 
     text = "🛒 *Your Recent Orders*\n\n"
     found = False
 
-    for o in user_orders:
+    for o in cursor:
         found = True
         text += (
             f"📦 Product: {o['product']}\n"
@@ -97,7 +93,7 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if not db:
+    if db is None:
         await q.message.edit_text("❌ Database error.")
         return
 
@@ -125,4 +121,4 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(kb)
-    )
+        )
