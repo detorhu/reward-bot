@@ -110,6 +110,7 @@ async def redeem_custom(update, context):
     )
 
 # =================================================
+# =================================================
 # HANDLE PLAN CLICK (RECHARGE / CASH)
 # =================================================
 async def redeem_plan_selected(update, context):
@@ -120,9 +121,16 @@ async def redeem_plan_selected(update, context):
     users = db.users
     plans = db.redeem_plans
 
-    plan_id = q.data.split("_")[-1]
-    plan = plans.find_one({"_id": plan_id})
+    # ✅ PLAN ID EXTRACTION
+    if q.data.startswith("recharge_plan_"):
+        plan_id = q.data.replace("recharge_plan_", "")
+    elif q.data.startswith("cash_plan_"):
+        plan_id = q.data.replace("cash_plan_", "")
+    else:
+        await q.message.edit_text("❌ Invalid request.")
+        return
 
+    plan = plans.find_one({"_id": plan_id})
     user = users.find_one({"_id": q.from_user.id})
 
     if not plan or not user:
@@ -137,10 +145,15 @@ async def redeem_plan_selected(update, context):
     context.user_data["redeem_type"] = plan["type"]
 
     if plan["type"] == "recharge":
-        await q.message.edit_text("📞 *Enter Mobile Number:*", parse_mode="Markdown")
-    else:
-        await q.message.edit_text("💰 *Enter UPI ID:*", parse_mode="Markdown")
-
+        await q.message.edit_text(
+            "📞 *Enter Mobile Number:*",
+            parse_mode="Markdown"
+        )
+    else:  # cash
+        await q.message.edit_text(
+            "💰 *Enter UPI ID:*",
+            parse_mode="Markdown"
+        )
 # =================================================
 # TEXT INPUT HANDLER (MOBILE / UPI / CUSTOM)
 # =================================================
