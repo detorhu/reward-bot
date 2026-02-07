@@ -4,14 +4,13 @@ from pymongo import MongoClient
 import time
 
 # ================= CONFIG =================
-BOT_TOKEN = "8096328605:AAEsi9pXGY_5SK9-Y9TtZVh0SQv8W0zpMRE"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 ADMIN_ID = 7066124462
 
-MONGO_URI = "mongodb+srv://neonman242:deadman242@game0.sqfzcd4.mongodb.net/reward_bot?retryWrites=true&w=majority"
+MONGO_URI = "YOUR_MONGO_URI"
 DB_NAME = "reward_bot"
 
 REF_POINTS = 5
-PREMIUM_MULTIPLIER = 2
 MIN_REWARD_POINTS = 100
 
 UPI_ID = "yourupi@upi"
@@ -41,7 +40,6 @@ def get_user(uid, username=None):
             "points": 0,
             "referrals": 0,
             "referred_by": None,
-            "premium": False,
             "joined": time.time()
         }
         users.insert_one(user)
@@ -175,6 +173,8 @@ async def buy_product(update, context):
 
     discount = min(u["points"], p["max_points_discount"])
     final = p["cash_price"] - discount
+
+    users.update_one({"_id": u["_id"]}, {"$inc": {"points": -discount}})
 
     oid = f"ord_{int(time.time())}"
     orders.insert_one({
