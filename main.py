@@ -20,7 +20,6 @@ from modules.redeem import (
 from modules.reward import reward_menu
 from modules.profile import (
     profile,              # 👈 NEW (IMPORTANT)
-    profile_menu,
     profile_orders,
     profile_referrals
 )
