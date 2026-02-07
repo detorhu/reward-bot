@@ -359,7 +359,60 @@ async def addproduct(update, context):
 })
     await update.message.reply_text("✅ Product added")
 # ==========================================
+# ================= DELETE PRODUCT ============
+async def delproduct(update, context):
+    if not is_admin(update.effective_user.id):
+        return
 
+    if not context.args:
+        await update.message.reply_text(
+            "Usage:\n/delproduct <product_id>"
+        )
+        return
+
+    pid = context.args[0]
+    p = products.find_one({"_id": pid})
+
+    if not p:
+        await update.message.reply_text("❌ Product not found")
+        return
+
+    products.update_one(
+        {"_id": pid},
+        {"$set": {"active": False}}
+    )
+
+    await update.message.reply_text(
+        f"🗑️ Product deleted (inactive):\n{p['name']}"
+    )
+# =============================================
+
+async def list_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        return
+
+    text = "📦 *Product List*\n\n"
+    count = 0
+
+    for p in products.find():
+        count += 1
+        status = "🟢 ACTIVE" if p.get("active") else "🔴 INACTIVE"
+
+        text += (
+            f"{count}️⃣ *{p['name']}*\n"
+            f"💰 Price: ₹{p['cash_price']}\n"
+            f"🎯 Max Discount: {p['max_points_discount']}\n"
+            f"🆔 ID: `{p['_id']}`\n"
+            f"📌 Status: {status}\n\n"
+        )
+
+    if count == 0:
+        text = "❌ No products found."
+
+    await update.message.reply_text(
+        text,
+        parse_mode="Markdown"
+    )
 # ================= SET QR ==================
 async def setqr(update, context):
     if not is_admin(update.effective_user.id):
@@ -384,7 +437,9 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("adminorders", admin_orders))
 app.add_handler(CommandHandler("sendkey", sendkey))
 app.add_handler(CommandHandler("addproduct", addproduct))
+app.add_handler(CommandHandler("delproduct", delproduct))
 app.add_handler(CommandHandler("setqr", setqr))
+app.add_handler(CommandHandler("products", list_products))
 
 app.add_handler(CallbackQueryHandler(referral, "^ref$"))
 app.add_handler(CallbackQueryHandler(redeem_menu, "^redeem$"))
