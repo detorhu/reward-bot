@@ -23,8 +23,9 @@ db = mongo[DB_NAME]
 users = db.users
 rewards = db.rewards
 ads = db.ads
+products = db.products
+orders = db.orders
 # =========================================
-
 
 # ================= HELPERS =================
 def get_user(uid, username=None):
@@ -50,7 +51,6 @@ def add_points(uid, amount):
 def is_admin(uid):
     return uid == ADMIN_ID
 # ==========================================
-
 
 # ================= START ===================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -79,26 +79,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton("💸 Reward", callback_data="btn_reward"),
             InlineKeyboardButton("💎 Premium", callback_data="btn_premium")
-        ]
+        ],
+        [InlineKeyboardButton("🛒 Buy Products", callback_data="buy_menu")]
     ]
 
     await update.message.reply_text(
         "👋 *Welcome to Rewards Bot*\n\n"
         "🎁 Refer friends & earn points\n"
-        "🛒 Redeem points for digital rewards\n\n"
+        "🛒 Redeem & buy digital products\n\n"
         "👇 Use buttons below:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(kb)
     )
 # ==========================================
 
-
 # ================= BUTTON HANDLERS =========
 async def referral_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    uid = q.from_user.id
-    link = f"https://t.me/{context.bot.username}?start={uid}"
+    link = f"https://t.me/{context.bot.username}?start={q.from_user.id}"
     await q.message.reply_text(
         f"🔗 *Your Referral Link:*\n{link}",
         parse_mode="Markdown"
@@ -173,8 +172,94 @@ async def redeem_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(kb),
         parse_mode="Markdown"
     )
-# ==========================================
 
+
+async def buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    kb = []
+    for p in products.find({"active": True}):
+        kb.append([
+            InlineKeyboardButton(
+                f"{p['name']} – ₹{p['cash_price']}",
+                callback_data=f"buy_{p['_id']}"
+            )
+        ])
+
+    if not kb:
+        await q.message.reply_text("❌ No products available.")
+        return
+
+    await q.message.reply_text(
+        "🛒 *Available Products*",
+        reply_markup=InlineKeyboardMarkup(kb),
+        parse_mode="Markdown"
+    )
+
+
+async def buy_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    product_id = q.data.replace("buy_", "")
+    product = products.find_one({"_id": product_id})
+
+    if not product:
+        await q.message.reply_text("❌ Product not found.")
+        return
+
+    user = get_user(q.from_user.id)
+    discount = min(user["points"], product["max_points_discount"])
+    final_price = product["cash_price"] - discount
+
+    orders.insert_one({
+        "user_id": q.from_user.id,
+        "product_id": product_id,
+        "final_price": final_price,
+        "points_used": discount,
+        "payment_status": "pending",
+        "delivery_status": "pending",
+        "created": time.time()
+    })
+
+    await q.message.reply_text(
+        f"🛒 *Order Created*\n\n"
+        f"📦 Product: {product['name']}\n"
+        f"💵 Price: ₹{product['cash_price']}\n"
+        f"🎯 Discount: ₹{discount}\n"
+        f"✅ Final: ₹{final_price}\n\n"
+        f"💬 Payment instructions next step me aayenge.",
+        parse_mode="Markdown"
+    )
+
+
+async def add_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        return
+
+    if len(context.args) < 3:
+        await update.message.reply_text(
+            "❌ Usage:\n/addproduct <name> <price> <max_discount>"
+        )
+        return
+
+    name = context.args[0]
+    price = int(context.args[1])
+    discount = int(context.args[2])
+
+    products.insert_one({
+        "_id": f"prod_{int(time.time())}",
+        "name": name,
+        "description": "",
+        "cash_price": price,
+        "max_points_discount": discount,
+        "delivery_type": "manual",
+        "active": True
+    })
+
+    await update.message.reply_text("✅ Product added")
+# ==========================================
 
 # ================= COMMAND BACKUP ==========
 async def refer(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -189,7 +274,6 @@ async def refer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await balance_button(update, context)
 # ==========================================
-
 
 # ================= REDEEM ==================
 async def redeem(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -225,7 +309,6 @@ async def redeem_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 # ==========================================
 
-
 # ================= MAIN ====================
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -233,6 +316,7 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("refer", refer))
 app.add_handler(CommandHandler("balance", balance))
 app.add_handler(CommandHandler("redeem", redeem))
+app.add_handler(CommandHandler("addproduct", add_product))
 
 app.add_handler(CallbackQueryHandler(referral_button, pattern="^get_ref$"))
 app.add_handler(CallbackQueryHandler(balance_button, pattern="^btn_balance$"))
@@ -240,6 +324,8 @@ app.add_handler(CallbackQueryHandler(redeem_button, pattern="^btn_redeem$"))
 app.add_handler(CallbackQueryHandler(reward_button, pattern="^btn_reward$"))
 app.add_handler(CallbackQueryHandler(premium_button, pattern="^btn_premium$"))
 app.add_handler(CallbackQueryHandler(redeem_callback, pattern="^redeem_"))
+app.add_handler(CallbackQueryHandler(buy_menu, pattern="^buy_menu$"))
+app.add_handler(CallbackQueryHandler(buy_product, pattern="^buy_"))
 
 print("✅ Reward Bot with MongoDB Running")
 app.run_polling()
