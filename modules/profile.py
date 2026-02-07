@@ -1,18 +1,23 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
-import time
-import html
+import time, html
 
-# ================= PROFILE ENTRY =================
+# ================= PROFILE ENTRY (HANDLER TARGET) =================
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    if not q:
+        return
     await profile_menu(update, context)
 
 # ================= PROFILE MENU =================
 async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
+    if not q:
+        return
     await q.answer()
 
+    # ✅ DB FETCH (MISSING EARLIER)
     db = context.application.bot_data.get("db")
     if not db:
         await q.message.edit_text("❌ Database connection error.")
@@ -26,7 +31,6 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.message.edit_text("❌ User profile not found.")
         return
 
-    # ✅ SAFE ESCAPE
     username = user.get("username")
     username_text = f"@{html.escape(username)}" if username else "Not set"
 
@@ -64,14 +68,13 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================= ORDER HISTORY =================
 async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
+    if not q:
+        return
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if not db:
-        await q.message.edit_text("❌ Database error.")
-        return
-
     orders = db.orders
+
     cursor = orders.find({"user": q.from_user.id}).sort("_id", -1).limit(10)
 
     text = "🛒 <b>Your Recent Orders</b>\n\n"
@@ -100,18 +103,13 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================= REFERRAL INFO =================
 async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
+    if not q:
+        return
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if not db:
-        await q.message.edit_text("❌ Database error.")
-        return
-
     users = db.users
     user = users.find_one({"_id": q.from_user.id})
-    if not user:
-        await q.message.edit_text("❌ User not found.")
-        return
 
     referred_by = user.get("referred_by")
     referred_text = f"<code>{referred_by}</code>" if referred_by else "No one (Direct user)"
