@@ -90,9 +90,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_text(
-        "👋 *Welcome to Rewards Bot*",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(kb)
+    "👋 *Welcome to Rewards Bot*\n\n"
+    "🎁 Refer friends & earn points\n"
+    "🛒 Redeem points for digital rewards\n"
+    "💎 Premium available",
+    parse_mode="Markdown",
+    reply_markup=InlineKeyboardMarkup(kb)
     )
 # ==========================================
 
@@ -308,13 +311,12 @@ async def addproduct(update, context):
     discount = int(context.args[2])
 
     products.insert_one({
-        "_id": f"prod_{int(time.time())}",
-        "name": name,
-        "cash_price": price,
-        "max_points_discount": discount,
-        "active": True
-    })
-
+    "_id": f"prod_{int(time.time())}",
+    "name": name,
+    "cash_price": price,
+    "max_points_discount": discount,
+    "active": True
+})
     await update.message.reply_text("✅ Product added")
 # ==========================================
 
