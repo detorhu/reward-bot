@@ -4,7 +4,19 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from pymongo import MongoClient
 import time
-from modules.redeem import redeem_menu
+from modules.admin_redeem import (
+    admin_redeems,
+    redeem_view,
+    redeem_approve,
+    redeem_reject
+)
+from modules.redeem import (
+    redeem_menu,
+    redeem_reward,
+    redeem_recharge,
+    redeem_cash,
+    redeem_custom
+)
 from modules.reward import reward_menu
 from modules.profile import (
     profile_menu,
@@ -457,6 +469,14 @@ app.add_handler(CommandHandler("products", list_products))
 
 app.add_handler(CallbackQueryHandler(referral, "^ref$"))
 app.add_handler(CallbackQueryHandler(redeem_menu, "^redeem$"))
+app.add_handler(CallbackQueryHandler(redeem_reward, "^redeem_reward$"))
+app.add_handler(CallbackQueryHandler(redeem_recharge, "^redeem_recharge$"))
+app.add_handler(CallbackQueryHandler(redeem_cash, "^redeem_cash$"))
+app.add_handler(CallbackQueryHandler(redeem_custom, "^redeem_custom$"))
+app.add_handler(CommandHandler("adminredeems", admin_redeems))
+app.add_handler(CallbackQueryHandler(redeem_view, "^redeem_view_"))
+app.add_handler(CallbackQueryHandler(redeem_approve, "^redeem_ok_"))
+app.add_handler(CallbackQueryHandler(redeem_reject, "^redeem_rej_"))
 app.add_handler(CallbackQueryHandler(reward_menu, "^reward$"))
 app.add_handler(CallbackQueryHandler(premium, "^premium$"))
 app.add_handler(CallbackQueryHandler(buy_menu, "^buy_menu$"))
