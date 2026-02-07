@@ -71,42 +71,66 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
     kb = [
-        [InlineKeyboardButton("🔗 Get Referral Link", callback_data="get_ref")]
+        [InlineKeyboardButton("🔗 Referral Link", callback_data="get_ref")],
+        [
+            InlineKeyboardButton("💰 Balance", callback_data="btn_balance"),
+            InlineKeyboardButton("🛒 Redeem", callback_data="btn_redeem")
+        ],
+        [
+            InlineKeyboardButton("💸 Reward", callback_data="btn_reward"),
+            InlineKeyboardButton("💎 Premium", callback_data="btn_premium")
+        ]
     ]
 
-    text = (
+    await update.message.reply_text(
         "👋 *Welcome to Rewards Bot*\n\n"
         "🎁 Refer friends & earn points\n"
-        "🛒 Redeem points for digital rewards\n"
-        "💎 Premium available\n\n"
-        "👇 Use the button below:"
-    )
-
-    await update.message.reply_text(
-        text,
+        "🛒 Redeem points for digital rewards\n\n"
+        "👇 Use buttons below:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(kb)
     )
 # ==========================================
 
 
-# ================= INLINE REF BUTTON ======
+# ================= BUTTON HANDLERS =========
 async def referral_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-
     uid = q.from_user.id
     link = f"https://t.me/{context.bot.username}?start={uid}"
-
     await q.message.reply_text(
-        f"🔗 *Your Referral Link:*\n{link}\n\n"
-        "Share this link with friends 👥",
+        f"🔗 *Your Referral Link:*\n{link}",
         parse_mode="Markdown"
     )
+
+
+async def balance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    u = get_user(q.from_user.id)
+    await q.message.reply_text(
+        f"💰 *Points:* {u['points']}\n"
+        f"👥 *Referrals:* {u['referrals']}\n"
+        f"💎 *Premium:* {'Yes' if u['premium'] else 'No'}",
+        parse_mode="Markdown"
+    )
+
+
+async def reward_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await reward(update, context)
+
+
+async def premium_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await premium(update, context)
+
+
+async def redeem_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await redeem(update, context)
 # ==========================================
 
 
-# ================= REFER (COMMAND BACKUP) ==
+# ================= COMMAND BACKUP ==========
 async def refer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     link = f"https://t.me/{context.bot.username}?start={uid}"
@@ -114,18 +138,10 @@ async def refer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔗 *Your Referral Link:*\n{link}",
         parse_mode="Markdown"
     )
-# ==========================================
 
 
-# ================= BALANCE =================
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = get_user(update.effective_user.id)
-    await update.message.reply_text(
-        f"💰 *Points:* {u['points']}\n"
-        f"👥 *Referrals:* {u['referrals']}\n"
-        f"💎 *Premium:* {'Yes' if u['premium'] else 'No'}",
-        parse_mode="Markdown"
-    )
+    await balance_button(update, context)
 # ==========================================
 
 
@@ -154,7 +170,6 @@ async def redeem_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     users.update_one({"_id": uid}, {"$inc": {"points": -cost}})
-
     await q.message.reply_text("✅ Redeem request sent.\nAdmin will deliver shortly.")
 
     await context.bot.send_message(
@@ -171,9 +186,7 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(uid)
 
     if user["points"] < MIN_REWARD_POINTS:
-        await update.message.reply_text(
-            "❌ Minimum 100 points required.\nRewards are subject to verification."
-        )
+        await update.message.reply_text("❌ Minimum 100 points required.")
         return
 
     users.update_one({"_id": uid}, {"$inc": {"points": -MIN_REWARD_POINTS}})
@@ -184,7 +197,7 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "status": "pending"
     })
 
-    await update.message.reply_text("✅ Reward request submitted.\n⏳ Manual review in progress.")
+    await update.message.reply_text("✅ Reward request submitted.")
 
     await context.bot.send_message(
         ADMIN_ID,
@@ -201,28 +214,9 @@ async def premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✔️ 2x referral points\n"
         "✔️ Faster rewards\n"
         "✔️ Premium bot access\n\n"
-        "Price: ₹199 / month\n"
-        "Contact admin to activate",
+        "Price: ₹199 / month",
         parse_mode="Markdown"
     )
-
-
-async def addpremium(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return
-    uid = int(context.args[0])
-    users.update_one({"_id": uid}, {"$set": {"premium": True}})
-    await update.message.reply_text("✅ Premium activated")
-# ==========================================
-
-
-# ================= ADS =====================
-async def addad(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return
-    text = " ".join(context.args)
-    ads.insert_one({"text": text})
-    await update.message.reply_text("✅ Ad added")
 # ==========================================
 
 
@@ -244,12 +238,16 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("refer", refer))
 app.add_handler(CommandHandler("balance", balance))
 app.add_handler(CommandHandler("redeem", redeem))
-app.add_handler(CallbackQueryHandler(redeem_callback, pattern="^redeem_"))
+
 app.add_handler(CallbackQueryHandler(referral_button, pattern="^get_ref$"))
+app.add_handler(CallbackQueryHandler(balance_button, pattern="^btn_balance$"))
+app.add_handler(CallbackQueryHandler(redeem_button, pattern="^btn_redeem$"))
+app.add_handler(CallbackQueryHandler(reward_button, pattern="^btn_reward$"))
+app.add_handler(CallbackQueryHandler(premium_button, pattern="^btn_premium$"))
+app.add_handler(CallbackQueryHandler(redeem_callback, pattern="^redeem_"))
+
 app.add_handler(CommandHandler("reward", reward))
 app.add_handler(CommandHandler("premium", premium))
-app.add_handler(CommandHandler("addpremium", addpremium))
-app.add_handler(CommandHandler("addad", addad))
 app.add_handler(CommandHandler("stats", stats))
 
 print("✅ Reward Bot with MongoDB Running")
