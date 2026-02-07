@@ -4,6 +4,11 @@ from pymongo import MongoClient
 import time
 from modules.redeem import redeem_menu
 from modules.reward import reward_menu
+from modules.profile import (
+    profile_menu,
+    profile_orders,
+    profile_referrals
+)
 # ================= CONFIG =================
 BOT_TOKEN = "8096328605:AAEsi9pXGY_5SK9-Y9TtZVh0SQv8W0zpMRE"
 ADMIN_ID = 7066124462
