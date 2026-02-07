@@ -1,5 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from telegram.constants import ParseMode
 
 # ================= ADMIN REDEEM LIST =================
 async def admin_redeems(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -24,12 +25,12 @@ async def admin_redeems(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "📋 *Pending Redeem Requests*",
-        parse_mode="Markdown",
+        parse_mode=ParseMode.MARKDOWN,
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
 # ================= VIEW REDEEM =================
-async def redeem_view(update, context):
+async def redeem_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
@@ -52,12 +53,12 @@ async def redeem_view(update, context):
         f"👤 User ID: `{r['user']}`\n"
         f"🎯 Points: {r['points']}\n"
         f"🔹 Type: {r['type']}",
-        parse_mode="Markdown",
+        parse_mode=ParseMode.MARKDOWN,
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
 # ================= APPROVE =================
-async def redeem_approve(update, context):
+async def redeem_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
@@ -68,9 +69,11 @@ async def redeem_approve(update, context):
     users = db.users
 
     r = redeems.find_one({"_id": rid})
-    if not r:
+    if not r or r["status"] != "pending":
+        await q.message.edit_text("⚠️ Already processed.")
         return
 
+    # ✅ AUTO POINT DEDUCTION
     users.update_one(
         {"_id": r["user"]},
         {"$inc": {"points": -r["points"]}}
@@ -86,18 +89,24 @@ async def redeem_approve(update, context):
         "🎉 *Redeem Approved!*\n\n"
         "Admin ne aapka redeem approve kar diya hai.\n"
         "Reward / cash jald hi milega 💰",
-        parse_mode="Markdown"
+        parse_mode=ParseMode.MARKDOWN
     )
 
-    await q.message.edit_text("✅ Redeem approved.")
+    await q.message.edit_text("✅ Redeem approved & points deducted.")
 
 # ================= REJECT =================
-async def redeem_reject(update, context):
+async def redeem_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
     rid = q.data.replace("redeem_rej_", "")
     db = context.application.bot_data["db"]
+    redeems = db.redeems   # ✅ FIXED
+
+    r = redeems.find_one({"_id": rid})
+    if not r or r["status"] != "pending":
+        await q.message.edit_text("⚠️ Already processed.")
+        return
 
     redeems.update_one(
         {"_id": rid},
