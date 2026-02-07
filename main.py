@@ -180,19 +180,19 @@ async def buy_product(update, context):
 
     kb = [[InlineKeyboardButton("✅ I Have Paid", callback_data=f"paid_{oid}")]]
 
-    await q.message.reply_photo(
-        photo=get_qr(),
-        caption=(
-            f"🛒 *Order Created*\n\n"
-            f"📦 Product: {p['name']}\n"
-            f"💰 Price: ₹{p['cash_price']}\n"
-            f"🎯 Discount: ₹{discount}\n"
-            f"✅ Final Pay: ₹{final_price}\n\n"
-            f"UPI: `{UPI_ID}`"
-        ),
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(kb)
-        )
+    await q.message.reply_text(
+    (
+        f"🛒 *Order Created*\n\n"
+        f"📦 Product: {p['name']}\n"
+        f"💰 Price: ₹{p['cash_price']}\n"
+        f"🎯 Discount: ₹{discount}\n"
+        f"✅ Final Pay: ₹{final_price}\n\n"
+        f"UPI ID: `{UPI_ID}`\n\n"
+        f"Payment ke baad *I Have Paid* dabaye"
+    ),
+    parse_mode="Markdown",
+    reply_markup=InlineKeyboardMarkup(kb)
+    )
 
 # ================= PAYMENT =================
 async def paid(update, context):
