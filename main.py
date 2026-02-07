@@ -80,7 +80,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = [
         [InlineKeyboardButton("🔗 Referral", callback_data="ref")],
         [
-            InlineKeyboardButton("💰 Balance", callback_data="bal"),
+            InlineKeyboardButton("👤 Profile", callback_data="profile"),
             InlineKeyboardButton("🛒 Redeem", callback_data="redeem")
         ],
         [
@@ -106,14 +106,6 @@ async def referral(update, context):
     await q.answer()
     await q.message.reply_text(
         f"https://t.me/{context.bot.username}?start={q.from_user.id}"
-    )
-
-async def balance(update, context):
-    q = update.callback_query
-    await q.answer()
-    u = get_user(q.from_user.id)
-    await q.message.reply_text(
-        f"💰 Points: {u['points']}\n👥 Referrals: {u['referrals']}"
     )
 
 async def premium(update, context):
@@ -345,7 +337,6 @@ app.add_handler(CommandHandler("addproduct", addproduct))
 app.add_handler(CommandHandler("setqr", setqr))
 
 app.add_handler(CallbackQueryHandler(referral, "^ref$"))
-app.add_handler(CallbackQueryHandler(balance, "^bal$"))
 app.add_handler(CallbackQueryHandler(redeem_menu, "^redeem$"))
 app.add_handler(CallbackQueryHandler(reward_menu, "^reward$"))
 app.add_handler(CallbackQueryHandler(premium, "^premium$"))
@@ -355,6 +346,9 @@ app.add_handler(CallbackQueryHandler(paid, "^paid_"))
 app.add_handler(CallbackQueryHandler(admin_view, "^adm_"))
 app.add_handler(CallbackQueryHandler(approve, "^ok_"))
 app.add_handler(CallbackQueryHandler(reject, "^rej_"))
+app.add_handler(CallbackQueryHandler(profile_menu, "^profile$"))
+app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
+app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
 
 print("✅ BOT RUNNING")
 app.run_polling()
