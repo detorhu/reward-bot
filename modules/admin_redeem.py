@@ -49,13 +49,16 @@ async def redeem_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]]
 
     await q.message.edit_text(
-        "🧾 *Redeem Details*\n\n"
-        f"👤 User ID: `{r['user']}`\n"
-        f"🎯 Points: {r['points']}\n"
-        f"🔹 Type: {r['type']}",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=InlineKeyboardMarkup(kb)
-    )
+    "🧾 *Redeem Details*\n\n"
+    f"👤 User ID: `{r['user']}`\n"
+    f"🎁 Type: {r['type']}\n"
+    f"📦 Plan: {r.get('plan','-')}\n"
+    f"💰 Amount: ₹{r.get('amount',0)}\n"
+    f"🎯 Points: {r['points']}\n"
+    f"📞 Mobile / UPI: `{r.get('input','-')}`",
+    parse_mode=ParseMode.MARKDOWN,
+    reply_markup=InlineKeyboardMarkup(kb)
+)
 
 # ================= APPROVE =================
 async def redeem_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,7 +92,7 @@ async def redeem_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🎉 *Redeem Approved!*\n\n"
         "Admin ne aapka redeem approve kar diya hai.\n"
         "Reward / cash jald hi milega 💰",
-        parse_mode=ParseMode.MARKDOWN
+        parse_mode=ParseMode.MARKDOWN,
     )
 
     await q.message.edit_text("✅ Redeem approved & points deducted.")
