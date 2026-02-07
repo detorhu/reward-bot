@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 import time
+import html
 
 # ================= PROFILE ENTRY =================
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -25,8 +26,9 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.message.edit_text("❌ User profile not found.")
         return
 
+    # ✅ SAFE ESCAPE
     username = user.get("username")
-    username_text = f"@{username}" if username else "Not set"
+    username_text = f"@{html.escape(username)}" if username else "Not set"
 
     total_orders = orders.count_documents({"user": q.from_user.id})
     completed_orders = orders.count_documents(
@@ -78,10 +80,10 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for o in cursor:
         found = True
         text += (
-            f"📦 <b>Product:</b> {o['product']}\n"
+            f"📦 <b>Product:</b> {html.escape(o['product'])}\n"
             f"💰 <b>Price:</b> ₹{o['price']}\n"
             f"🎯 <b>Discount Used:</b> {o.get('discount', 0)}\n"
-            f"📌 <b>Status:</b> {o['status']}\n\n"
+            f"📌 <b>Status:</b> {html.escape(o['status'])}\n\n"
         )
 
     if not found:
@@ -107,7 +109,6 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     users = db.users
     user = users.find_one({"_id": q.from_user.id})
-
     if not user:
         await q.message.edit_text("❌ User not found.")
         return
@@ -129,4 +130,4 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(kb)
-                      )
+    )
