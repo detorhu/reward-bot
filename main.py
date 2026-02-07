@@ -2,7 +2,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from pymongo import MongoClient
 import time
-
+from modules.redeem import redeem_menu
+from modules.reward import reward_menu
 # ================= CONFIG =================
 BOT_TOKEN = "8096328605:AAEsi9pXGY_5SK9-Y9TtZVh0SQv8W0zpMRE"
 ADMIN_ID = 7066124462
@@ -332,20 +333,6 @@ async def setqr(update, context):
     set_qr(context.args[0])
     await update.message.reply_text("✅ QR updated")
 
-# ================= REDEEM =================
-async def redeem(update, context):
-    q = update.callback_query
-    await q.answer()
-    await q.message.reply_text(
-        "🔧 Redeem system coming soon.\nAbhi available nahi hai."
-    )
-# =========================================
-async def reward(update, context):
-    q = update.callback_query
-    await q.answer()
-    await q.message.reply_text(
-        "🎁 Reward system abhi under development hai."
-        )
 # ==========================================
 
 # ================= MAIN ====================
@@ -359,8 +346,8 @@ app.add_handler(CommandHandler("setqr", setqr))
 
 app.add_handler(CallbackQueryHandler(referral, "^ref$"))
 app.add_handler(CallbackQueryHandler(balance, "^bal$"))
-app.add_handler(CallbackQueryHandler(redeem, "^redeem$"))
-app.add_handler(CallbackQueryHandler(reward, "^reward$"))
+app.add_handler(CallbackQueryHandler(redeem_menu, "^redeem$"))
+app.add_handler(CallbackQueryHandler(reward_menu, "^reward$"))
 app.add_handler(CallbackQueryHandler(premium, "^premium$"))
 app.add_handler(CallbackQueryHandler(buy_menu, "^buy_menu$"))
 app.add_handler(CallbackQueryHandler(buy_product, r"^buy_prod_"))
