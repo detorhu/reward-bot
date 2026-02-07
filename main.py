@@ -4,10 +4,10 @@ from pymongo import MongoClient
 import time
 
 # ================= CONFIG =================
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+BOT_TOKEN = "8096328605:AAEsi9pXGY_5SK9-Y9TtZVh0SQv8W0zpMRE"
 ADMIN_ID = 7066124462
 
-MONGO_URI = "YOUR_MONGO_URI"
+MONGO_URI = "mongodb+srv://neonman242:deadman242@game0.sqfzcd4.mongodb.net/reward_bot?retryWrites=true&w=majority"
 DB_NAME = "reward_bot"
 
 REF_POINTS = 5
