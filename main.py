@@ -155,26 +155,26 @@ async def buy_product(update, context):
 
     u = get_user(q.from_user.id)
 
-discount = min(u["points"], p["max_points_discount"])
-final_price = p["cash_price"] - discount
+    discount = min(u["points"], p["max_points_discount"])
+    final_price = p["cash_price"] - discount
 
-oid = f"ord_{int(time.time())}"
-orders.insert_one({
-    "_id": oid,
-    "user": u["_id"],
-    "product": p["name"],
-    "price": final_price,
-    "discount": discount,
-    "status": "pending"
-})
+    oid = f"ord_{int(time.time())}"
+    orders.insert_one({
+        "_id": oid,
+        "user": u["_id"],
+        "product": p["name"],
+        "price": final_price,
+        "discount": discount,
+        "status": "pending"
+    })
 
-# 🔻 POINTS DEDUCT FIX (INDENTATION VERY IMPORTANT)
-if discount > 0:
-    users.update_one(
-        {"_id": u["_id"]},
-        {"$inc": {"points": -discount}}
-    )
-    
+    # ✅ POINTS DEDUCT (INSIDE FUNCTION)
+    if discount > 0:
+        users.update_one(
+            {"_id": u["_id"]},
+            {"$inc": {"points": -discount}}
+        )
+
     kb = [[InlineKeyboardButton("✅ I Have Paid", callback_data=f"paid_{oid}")]]
 
     await q.message.reply_photo(
@@ -189,7 +189,7 @@ if discount > 0:
         ),
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(kb)
-    )
+        )
 
 # ================= PAYMENT =================
 async def paid(update, context):
