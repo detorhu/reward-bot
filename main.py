@@ -9,7 +9,7 @@ import time
 # ================= CONFIG =================
 BOT_TOKEN = "8096328605:AAEsi9pXGY_5SK9-Y9TtZVh0SQv8W0zpMRE"
 ADMIN_ID = 7066124462
-MONGO_URI = "mongodb+srv://neonman242:neonman.123@game0.sqfzcd4.mongodb.net/?appName=game0"
+MONGO_URI = "mongodb+srv://neonman242:deadman242@game0.sqfzcd4.mongodb.net/?appName=game0"
 DB_NAME = "reward_bot"
 
 REF_POINTS = 5
