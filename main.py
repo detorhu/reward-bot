@@ -1,3 +1,5 @@
+from modules.admin_redeem_plans import listcash
+from modules.admin_redeem_plans import listrecharge
 from modules.admin_redeem_plans import addrecharge, delrecharge, addcash
 from modules.admin_help import adminhelp
 from modules.payment_proof import receive_payment_proof
@@ -473,6 +475,8 @@ app.add_handler(CommandHandler("delproduct", delproduct))
 app.add_handler(CommandHandler("setqr", setqr))
 app.add_handler(CommandHandler("products", list_products))
 app.add_handler(CommandHandler("adminhelp", adminhelp))
+app.add_handler(CommandHandler("rechargeplans", listrecharge))
+app.add_handler(CommandHandler("cashplans", listcash))
 # ================= CALLBACK HANDLERS (ORDER MATTERS) =================
 
 # 🔗 BASIC
