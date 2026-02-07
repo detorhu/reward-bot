@@ -490,6 +490,8 @@ app.add_handler(CallbackQueryHandler(redeem_recharge, "^redeem_recharge$"))
 app.add_handler(CallbackQueryHandler(redeem_cash, "^redeem_cash$"))
 app.add_handler(CallbackQueryHandler(redeem_custom, "^redeem_custom$"))
 
+app.add_handler(CallbackQueryHandler(redeem_plan_selected, "^recharge_plan_|^cash_plan_"))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, redeem_text_input))
 # 🧾 ADMIN REDEEM FLOW
 app.add_handler(CallbackQueryHandler(redeem_view, "^redeem_view_"))
 app.add_handler(CallbackQueryHandler(redeem_approve, "^redeem_ok_"))
