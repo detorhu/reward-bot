@@ -138,8 +138,22 @@ async def start_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def referral(update, context):
     q = update.callback_query
     await q.answer()
+
+    referral_link = f"https://t.me/{context.bot.username}?start={q.from_user.id}"
+
+    text = (
+        "🔗 *Your Referral Link*\n\n"
+        "Share this link with your friends and earn rewards when they join using it.\n\n"
+        "🎁 *Benefits:*\n"
+        "• Earn points for every successful referral\n"
+        "• Use points to get discounts on products\n"
+        "• Redeem points for exclusive rewards\n\n"
+        f"👉 {referral_link}"
+    )
+
     await q.message.reply_text(
-        f"https://t.me/{context.bot.username}?start={q.from_user.id}"
+        text,
+        parse_mode="Markdown"
     )
 
 async def premium(update, context):
