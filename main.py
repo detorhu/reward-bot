@@ -82,6 +82,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
+    # ✅ KB HAMESHA BANNA CHAHIYE
     kb = [
         [InlineKeyboardButton("🔗 Referral", callback_data="ref")],
         [
@@ -96,15 +97,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_text(
-    "👋 *Welcome to Rewards Bot*\n\n"
-    "🎁 Refer friends & earn points\n"
-    "🛒 Redeem points for digital rewards\n"
-    "💎 Premium available",
-    parse_mode="Markdown",
-    reply_markup=InlineKeyboardMarkup(kb)
+        "👋 *Welcome to Rewards Bot*\n\n"
+        "🎁 Refer friends & earn points\n"
+        "🛒 Redeem points for digital rewards\n"
+        "💎 Premium available",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(kb)
     )
 # ==========================================
-
+# ================= START BACK =================
+async def start_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    await start(q, context)
+# ==============================================
 # ================= BASIC ===================
 async def referral(update, context):
     q = update.callback_query
@@ -356,6 +362,7 @@ app.add_handler(CallbackQueryHandler(reject, "^rej_"))
 app.add_handler(CallbackQueryHandler(profile_menu, "^profile$"))
 app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
 app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
+app.add_handler(CallbackQueryHandler(start_back, "^start_back$"))
 
 print("✅ BOT RUNNING")
 app.run_polling()
