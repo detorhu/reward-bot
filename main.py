@@ -14,7 +14,7 @@ REF_POINTS = 5
 MIN_REWARD_POINTS = 100
 
 UPI_ID = "avanishpal080@oksbi"
-QR_IMAGE_URL = "https://example.com/qr.png"
+QR_IMAGE_URL = "https://github.com/detorhu/reward-bot/qr.png"
 # =========================================
 
 # ================= DB =====================
