@@ -1,3 +1,4 @@
+from modules.admin_redeem_plans import addrecharge
 from modules.admin_help import adminhelp
 from modules.payment_proof import receive_payment_proof
 from telegram.ext import MessageHandler, filters
@@ -506,7 +507,7 @@ app.add_handler(CallbackQueryHandler(paid, "^paid_"))
 app.add_handler(CallbackQueryHandler(admin_view, "^adm_"))
 app.add_handler(CallbackQueryHandler(approve, "^ok_"))
 app.add_handler(CallbackQueryHandler(reject, "^rej_"))
-
+app.add_handler(CommandHandler("addrecharge", addrecharge))
 # 🔙 BACK TO MAIN
 app.add_handler(CallbackQueryHandler(start_back, "^start_back$"))
 
