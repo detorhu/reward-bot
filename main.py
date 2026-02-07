@@ -1,4 +1,4 @@
-from modules.admin_redeem_plans import addrecharge
+from modules.admin_redeem_plans import addrecharge, delrecharge, addcash
 from modules.admin_help import adminhelp
 from modules.payment_proof import receive_payment_proof
 from telegram.ext import MessageHandler, filters
@@ -6,6 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from pymongo import MongoClient
 import time
+from modules.redeem import redeem_plan_selected, redeem_text_input
 from modules.admin_redeem import (
     admin_redeems,
     redeem_view,
@@ -490,9 +491,15 @@ app.add_handler(CallbackQueryHandler(redeem_reward, "^redeem_reward$"))
 app.add_handler(CallbackQueryHandler(redeem_recharge, "^redeem_recharge$"))
 app.add_handler(CallbackQueryHandler(redeem_cash, "^redeem_cash$"))
 app.add_handler(CallbackQueryHandler(redeem_custom, "^redeem_custom$"))
+app.add_handler(CallbackQueryHandler(
+    redeem_plan_selected,
+    "^recharge_plan_|^cash_plan_"
+))
 
-app.add_handler(CallbackQueryHandler(redeem_plan_selected, "^recharge_plan_|^cash_plan_"))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, redeem_text_input))
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND,
+    redeem_text_input
+))
 # 🧾 ADMIN REDEEM FLOW
 app.add_handler(CallbackQueryHandler(redeem_view, "^redeem_view_"))
 app.add_handler(CallbackQueryHandler(redeem_approve, "^redeem_ok_"))
@@ -508,6 +515,8 @@ app.add_handler(CallbackQueryHandler(admin_view, "^adm_"))
 app.add_handler(CallbackQueryHandler(approve, "^ok_"))
 app.add_handler(CallbackQueryHandler(reject, "^rej_"))
 app.add_handler(CommandHandler("addrecharge", addrecharge))
+app.add_handler(CommandHandler("delrecharge", delrecharge))
+app.add_handler(CommandHandler("addcash", addcash))
 # 🔙 BACK TO MAIN
 app.add_handler(CallbackQueryHandler(start_back, "^start_back$"))
 
