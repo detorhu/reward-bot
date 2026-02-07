@@ -109,7 +109,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    await start(q, context)
+
+    kb = [
+        [InlineKeyboardButton("🔗 Referral", callback_data="ref")],
+        [
+            InlineKeyboardButton("👤 Profile", callback_data="profile"),
+            InlineKeyboardButton("🛒 Redeem", callback_data="redeem")
+        ],
+        [
+            InlineKeyboardButton("💸 Reward", callback_data="reward"),
+            InlineKeyboardButton("💎 Premium", callback_data="premium")
+        ],
+        [InlineKeyboardButton("🛒 Buy Products", callback_data="buy_menu")]
+    ]
+
+    await q.message.reply_text(
+        "👋 *Welcome to Rewards Bot*\n\n"
+        "🎁 Refer friends & earn points\n"
+        "🛒 Redeem points for digital rewards\n"
+        "💎 Premium available",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(kb)
+    )
 # ==============================================
 # ================= BASIC ===================
 async def referral(update, context):
