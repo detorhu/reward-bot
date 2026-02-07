@@ -161,7 +161,18 @@ async def premium_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def redeem_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    await redeem(update, context)
+
+    kb = [
+        [InlineKeyboardButton("🔑 1 Day Key – 20 pts", callback_data="redeem_20")],
+        [InlineKeyboardButton("🔑 7 Day Key – 80 pts", callback_data="redeem_80")],
+        [InlineKeyboardButton("🤖 Premium Bot – 150 pts", callback_data="redeem_150")]
+    ]
+
+    await q.message.reply_text(
+        "🛒 *Redeem Store*\nChoose reward:",
+        reply_markup=InlineKeyboardMarkup(kb),
+        parse_mode="Markdown"
+    )
 # ==========================================
 
 
