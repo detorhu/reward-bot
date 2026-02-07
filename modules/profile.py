@@ -9,7 +9,7 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     db = context.application.bot_data.get("db")
     if not db:
-        await q.message.reply_text("Database connection error.")
+        await q.message.edit_text("❌ Database connection error.")
         return
 
     users = db.users
@@ -17,7 +17,7 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = users.find_one({"_id": q.from_user.id})
     if not user:
-        await q.message.reply_text("User profile not found.")
+        await q.message.edit_text("❌ User profile not found.")
         return
 
     total_orders = orders.count_documents({"user": q.from_user.id})
@@ -47,9 +47,9 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await q.message.edit_text(
-    text,
-    parse_mode="Markdown",
-    reply_markup=InlineKeyboardMarkup(kb)
+        text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(kb)
     )
 
 # ================= ORDER HISTORY =================
@@ -58,6 +58,10 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     db = context.application.bot_data.get("db")
+    if not db:
+        await q.message.edit_text("❌ Database error.")
+        return
+
     orders = db.orders
 
     user_orders = orders.find(
@@ -81,12 +85,11 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     kb = [[InlineKeyboardButton("🔙 Back to Profile", callback_data="profile")]]
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         text,
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(kb)
     )
-
 
 # ================= REFERRAL INFO =================
 async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -94,14 +97,19 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    users = db.users
+    if not db:
+        await q.message.edit_text("❌ Database error.")
+        return
 
+    users = db.users
     user = users.find_one({"_id": q.from_user.id})
 
+    if not user:
+        await q.message.edit_text("❌ User not found.")
+        return
+
     referred_by = user.get("referred_by")
-    referred_text = (
-        f"`{referred_by}`" if referred_by else "No one (Direct user)"
-    )
+    referred_text = f"`{referred_by}`" if referred_by else "No one (Direct user)"
 
     text = (
         "👥 *Referral Information*\n\n"
@@ -113,8 +121,8 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     kb = [[InlineKeyboardButton("🔙 Back to Profile", callback_data="profile")]]
 
-    await q.message.reply_text(
+    await q.message.edit_text(
         text,
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(kb)
-      )
+    )
