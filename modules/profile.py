@@ -1,13 +1,12 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
-import time, html
+import time
+import html
 
-# ================= PROFILE ENTRY =================
+# ================= PROFILE ENTRY (IMPORTANT) =================
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
-    if not q:
-        return
     await q.answer()
 
     db = context.application.bot_data["db"]
@@ -53,6 +52,7 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
+
 # ================= ORDER HISTORY =================
 async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -70,7 +70,7 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         found = True
         text += (
             f"📦 <b>{html.escape(o['product'])}</b>\n"
-            f"💰 ₹{o['price']} | 🎯 {o.get('discount', 0)}\n"
+            f"💰 ₹{o['price']}\n"
             f"📌 {html.escape(o['status'])}\n\n"
         )
 
@@ -85,6 +85,7 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
+
 # ================= REFERRAL INFO =================
 async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -92,16 +93,17 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     db = context.application.bot_data["db"]
     users = db.users
+
     user = users.find_one({"_id": q.from_user.id})
 
     referred_by = user.get("referred_by")
-    referred_text = f"<code>{referred_by}</code>" if referred_by else "Direct user"
+    ref_text = f"<code>{referred_by}</code>" if referred_by else "Direct user"
 
     text = (
         "👥 <b>Referral Info</b>\n\n"
-        f"👤 <b>Referred By:</b> {referred_text}\n"
+        f"👤 <b>Referred By:</b> {ref_text}\n"
         f"👥 <b>Total Referrals:</b> {user.get('referrals', 0)}\n"
-        f"💰 <b>Earned:</b> {user.get('referrals', 0) * 5} points"
+        f"💰 <b>Points Earned:</b> {user.get('referrals', 0) * 5}"
     )
 
     kb = [[InlineKeyboardButton("🔙 Back", callback_data="profile")]]
