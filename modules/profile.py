@@ -2,6 +2,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import time
 
+# ================= PROFILE ENTRY (WRAPPER) =================
+async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await profile_menu(update, context)
 # ================= PROFILE MENU =================
 async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
