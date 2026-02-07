@@ -1,33 +1,37 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler,
-    CallbackQueryHandler, ContextTypes
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from pymongo import MongoClient
 import time
 
 # ================= CONFIG =================
-BOT_TOKEN = "8096328605:AAEsi9pXGY_5SK9-Y9TtZVh0SQv8W0zpMRE"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 ADMIN_ID = 7066124462
-MONGO_URI = "mongodb+srv://neonman242:deadman242@game0.sqfzcd4.mongodb.net/reward_bot?retryWrites=true&w=majority"
+
+MONGO_URI = "YOUR_MONGO_URI"
 DB_NAME = "reward_bot"
 
 REF_POINTS = 5
 PREMIUM_MULTIPLIER = 2
 MIN_REWARD_POINTS = 100
+
+UPI_ID = "yourupi@upi"
+QR_IMAGE_URL = "https://example.com/qr.png"
 # =========================================
 
 # ================= DB =====================
 mongo = MongoClient(MONGO_URI)
 db = mongo[DB_NAME]
+
 users = db.users
 rewards = db.rewards
-ads = db.ads
 products = db.products
 orders = db.orders
 # =========================================
 
 # ================= HELPERS =================
+def is_admin(uid):
+    return uid == ADMIN_ID
+
 def get_user(uid, username=None):
     user = users.find_one({"_id": uid})
     if not user:
@@ -42,291 +46,214 @@ def get_user(uid, username=None):
         }
         users.insert_one(user)
     return user
-
-
-def add_points(uid, amount):
-    users.update_one({"_id": uid}, {"$inc": {"points": amount}})
-
-
-def is_admin(uid):
-    return uid == ADMIN_ID
 # ==========================================
 
 # ================= START ===================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    uid = user.id
-    data = get_user(uid, user.username)
+    u = update.effective_user
+    user = get_user(u.id, u.username)
 
     if context.args:
         try:
             ref = int(context.args[0])
-            if ref != uid and data["referred_by"] is None:
-                users.update_one({"_id": uid}, {"$set": {"referred_by": ref}})
-                ref_user = get_user(ref)
-                bonus = REF_POINTS * (PREMIUM_MULTIPLIER if ref_user["premium"] else 1)
-                add_points(ref, bonus)
-                users.update_one({"_id": ref}, {"$inc": {"referrals": 1}})
+            if ref != u.id and user["referred_by"] is None:
+                users.update_one({"_id": u.id}, {"$set": {"referred_by": ref}})
+                users.update_one({"_id": ref}, {"$inc": {"points": REF_POINTS, "referrals": 1}})
         except:
             pass
 
     kb = [
-        [InlineKeyboardButton("🔗 Referral Link", callback_data="get_ref")],
-        [
-            InlineKeyboardButton("💰 Balance", callback_data="btn_balance"),
-            InlineKeyboardButton("🛒 Redeem", callback_data="btn_redeem")
-        ],
-        [
-            InlineKeyboardButton("💸 Reward", callback_data="btn_reward"),
-            InlineKeyboardButton("💎 Premium", callback_data="btn_premium")
-        ],
+        [InlineKeyboardButton("🔗 Referral", callback_data="ref")],
+        [InlineKeyboardButton("💰 Balance", callback_data="bal"),
+         InlineKeyboardButton("🛒 Redeem", callback_data="redeem")],
+        [InlineKeyboardButton("💸 Reward", callback_data="reward"),
+         InlineKeyboardButton("💎 Premium", callback_data="premium")],
         [InlineKeyboardButton("🛒 Buy Products", callback_data="buy_menu")]
     ]
 
     await update.message.reply_text(
-        "👋 *Welcome to Rewards Bot*\n\n"
-        "🎁 Refer friends & earn points\n"
-        "🛒 Redeem & buy digital products\n\n"
-        "👇 Use buttons below:",
+        "👋 *Welcome to Rewards Bot*",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(kb)
     )
 # ==========================================
 
-# ================= BUTTON HANDLERS =========
-async def referral_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ================= BASIC BUTTONS ==========
+async def referral(update, context):
     q = update.callback_query
     await q.answer()
-    link = f"https://t.me/{context.bot.username}?start={q.from_user.id}"
     await q.message.reply_text(
-        f"🔗 *Your Referral Link:*\n{link}",
-        parse_mode="Markdown"
+        f"https://t.me/{context.bot.username}?start={q.from_user.id}"
     )
 
-
-async def balance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def balance(update, context):
     q = update.callback_query
     await q.answer()
     u = get_user(q.from_user.id)
     await q.message.reply_text(
-        f"💰 *Points:* {u['points']}\n"
-        f"👥 *Referrals:* {u['referrals']}\n"
-        f"💎 *Premium:* {'Yes' if u['premium'] else 'No'}",
-        parse_mode="Markdown"
+        f"Points: {u['points']}\nReferrals: {u['referrals']}"
     )
 
-
-async def reward_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def premium(update, context):
     q = update.callback_query
     await q.answer()
+    await q.message.reply_text("Premium = 2x referral points\nPrice ₹199")
 
-    uid = q.from_user.id
-    user = get_user(uid)
+# ==========================================
 
-    if user["points"] < MIN_REWARD_POINTS:
-        await q.message.reply_text("❌ Minimum 100 points required.")
+# ================= REWARD =================
+async def reward(update, context):
+    q = update.callback_query
+    await q.answer()
+    u = get_user(q.from_user.id)
+
+    if u["points"] < MIN_REWARD_POINTS:
+        await q.message.reply_text("Need 100 points")
         return
 
-    users.update_one({"_id": uid}, {"$inc": {"points": -MIN_REWARD_POINTS}})
-    rewards.insert_one({
-        "user_id": uid,
-        "amount": 50,
-        "time": time.time(),
-        "status": "pending"
-    })
+    users.update_one({"_id": u["_id"]}, {"$inc": {"points": -MIN_REWARD_POINTS}})
+    rewards.insert_one({"user": u["_id"], "amount": 50, "status": "pending"})
 
-    await q.message.reply_text("✅ Reward request submitted.")
+    await q.message.reply_text("Reward requested")
+    await context.bot.send_message(ADMIN_ID, f"Reward request from {u['_id']}")
 
-    await context.bot.send_message(
-        ADMIN_ID,
-        f"💸 *Reward Request*\nUser: `{uid}`\nAmount: ₹50",
-        parse_mode="Markdown"
-    )
+# ==========================================
 
-
-async def premium_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ================= REDEEM =================
+async def redeem(update, context):
     q = update.callback_query
     await q.answer()
-    await q.message.reply_text(
-        "💎 *Premium Plan*\n\n"
-        "✔️ 2x referral points\n"
-        "✔️ Faster rewards\n"
-        "✔️ Premium bot access\n\n"
-        "Price: ₹199 / month",
-        parse_mode="Markdown"
-    )
-
-
-async def redeem_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-
     kb = [
-        [InlineKeyboardButton("🔑 1 Day Key – 20 pts", callback_data="redeem_20")],
-        [InlineKeyboardButton("🔑 7 Day Key – 80 pts", callback_data="redeem_80")],
-        [InlineKeyboardButton("🤖 Premium Bot – 150 pts", callback_data="redeem_150")]
+        [InlineKeyboardButton("1 Day – 20 pts", callback_data="rd_20")],
+        [InlineKeyboardButton("7 Day – 80 pts", callback_data="rd_80")]
     ]
+    await q.message.reply_text("Redeem:", reply_markup=InlineKeyboardMarkup(kb))
 
-    await q.message.reply_text(
-        "🛒 *Redeem Store*\nChoose reward:",
-        reply_markup=InlineKeyboardMarkup(kb),
-        parse_mode="Markdown"
-    )
+async def redeem_do(update, context):
+    q = update.callback_query
+    cost = int(q.data.split("_")[1])
+    u = get_user(q.from_user.id)
 
+    if u["points"] < cost:
+        await q.answer("Not enough points", show_alert=True)
+        return
 
-async def buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    users.update_one({"_id": u["_id"]}, {"$inc": {"points": -cost}})
+    await q.message.reply_text("Redeem successful (admin will deliver)")
+
+# ==========================================
+
+# ================= BUY FLOW ===============
+async def buy_menu(update, context):
     q = update.callback_query
     await q.answer()
 
     kb = []
     for p in products.find({"active": True}):
-        kb.append([
-            InlineKeyboardButton(
-                f"{p['name']} – ₹{p['cash_price']}",
-                callback_data=f"buy_{p['_id']}"
-            )
-        ])
+        kb.append([InlineKeyboardButton(p["name"], callback_data=f"buy_{p['_id']}")])
 
-    if not kb:
-        await q.message.reply_text("❌ No products available.")
-        return
+    await q.message.reply_text("Products:", reply_markup=InlineKeyboardMarkup(kb))
 
-    await q.message.reply_text(
-        "🛒 *Available Products*",
-        reply_markup=InlineKeyboardMarkup(kb),
-        parse_mode="Markdown"
-    )
-
-
-async def buy_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def buy_product(update, context):
     q = update.callback_query
     await q.answer()
 
-    product_id = q.data.replace("buy_", "")
-    product = products.find_one({"_id": product_id})
+    pid = q.data.replace("buy_", "")
+    p = products.find_one({"_id": pid})
+    u = get_user(q.from_user.id)
 
-    if not product:
-        await q.message.reply_text("❌ Product not found.")
-        return
+    discount = min(u["points"], p["max_points_discount"])
+    final = p["cash_price"] - discount
 
-    user = get_user(q.from_user.id)
-    discount = min(user["points"], product["max_points_discount"])
-    final_price = product["cash_price"] - discount
+    users.update_one({"_id": u["_id"]}, {"$inc": {"points": -discount}})
 
+    oid = f"ord_{int(time.time())}"
     orders.insert_one({
-        "user_id": q.from_user.id,
-        "product_id": product_id,
-        "final_price": final_price,
-        "points_used": discount,
-        "payment_status": "pending",
-        "delivery_status": "pending",
-        "created": time.time()
+        "_id": oid,
+        "user": u["_id"],
+        "product": p["name"],
+        "price": final,
+        "status": "pending"
     })
 
-    await q.message.reply_text(
-        f"🛒 *Order Created*\n\n"
-        f"📦 Product: {product['name']}\n"
-        f"💵 Price: ₹{product['cash_price']}\n"
-        f"🎯 Discount: ₹{discount}\n"
-        f"✅ Final: ₹{final_price}\n\n"
-        f"💬 Payment instructions next step me aayenge.",
-        parse_mode="Markdown"
+    kb = [[InlineKeyboardButton("I Have Paid", callback_data=f"paid_{oid}")]]
+    await q.message.reply_photo(
+        QR_IMAGE_URL,
+        caption=f"Pay ₹{final}\nUPI: {UPI_ID}",
+        reply_markup=InlineKeyboardMarkup(kb)
     )
 
-
-async def add_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return
-
-    if len(context.args) < 3:
-        await update.message.reply_text(
-            "❌ Usage:\n/addproduct <name> <price> <max_discount>"
-        )
-        return
-
-    name = context.args[0]
-    price = int(context.args[1])
-    discount = int(context.args[2])
-
-    products.insert_one({
-        "_id": f"prod_{int(time.time())}",
-        "name": name,
-        "description": "",
-        "cash_price": price,
-        "max_points_discount": discount,
-        "delivery_type": "manual",
-        "active": True
-    })
-
-    await update.message.reply_text("✅ Product added")
-# ==========================================
-
-# ================= COMMAND BACKUP ==========
-async def refer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
-    link = f"https://t.me/{context.bot.username}?start={uid}"
-    await update.message.reply_text(
-        f"🔗 *Your Referral Link:*\n{link}",
-        parse_mode="Markdown"
-    )
-
-
-async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await balance_button(update, context)
-# ==========================================
-
-# ================= REDEEM ==================
-async def redeem(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [
-        [InlineKeyboardButton("🔑 1 Day Key – 20 pts", callback_data="redeem_20")],
-        [InlineKeyboardButton("🔑 7 Day Key – 80 pts", callback_data="redeem_80")],
-        [InlineKeyboardButton("🤖 Premium Bot – 150 pts", callback_data="redeem_150")]
-    ]
-    await update.message.reply_text(
-        "🛒 *Redeem Store*\nChoose reward:",
-        reply_markup=InlineKeyboardMarkup(kb),
-        parse_mode="Markdown"
-    )
-
-
-async def redeem_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def paid(update, context):
     q = update.callback_query
-    uid = q.from_user.id
-    cost = int(q.data.split("_")[1])
-    user = get_user(uid)
+    await q.answer()
+    oid = q.data.replace("paid_", "")
+    orders.update_one({"_id": oid}, {"$set": {"status": "submitted"}})
+    await q.message.reply_text("Payment submitted")
+    await context.bot.send_message(ADMIN_ID, f"New payment {oid}")
 
-    if user["points"] < cost:
-        await q.answer("Not enough points", show_alert=True)
-        return
+# ==========================================
 
-    users.update_one({"_id": uid}, {"$inc": {"points": -cost}})
-    await q.message.reply_text("✅ Redeem request sent.\nAdmin will deliver shortly.")
+# ================= ADMIN ==================
+async def admin_orders(update, context):
+    if not is_admin(update.effective_user.id): return
+    kb = []
+    for o in orders.find({"status": "submitted"}):
+        kb.append([InlineKeyboardButton(o["product"], callback_data=f"adm_{o['_id']}")])
+    await update.message.reply_text("Orders:", reply_markup=InlineKeyboardMarkup(kb))
 
-    await context.bot.send_message(
-        ADMIN_ID,
-        f"🛒 *Redeem Request*\nUser: `{uid}`\nCost: {cost} points",
-        parse_mode="Markdown"
-    )
+async def admin_view(update, context):
+    q = update.callback_query
+    await q.answer()
+    oid = q.data.replace("adm_", "")
+    kb = [[
+        InlineKeyboardButton("Approve", callback_data=f"ok_{oid}"),
+        InlineKeyboardButton("Reject", callback_data=f"rej_{oid}")
+    ]]
+    await q.message.reply_text("Approve?", reply_markup=InlineKeyboardMarkup(kb))
+
+async def approve(update, context):
+    q = update.callback_query
+    await q.answer()
+    oid = q.data.replace("ok_", "")
+    orders.update_one({"_id": oid}, {"$set": {"status": "approved"}})
+    await q.message.reply_text("Approved. Use /sendkey")
+
+async def reject(update, context):
+    q = update.callback_query
+    await q.answer()
+    oid = q.data.replace("rej_", "")
+    orders.update_one({"_id": oid}, {"$set": {"status": "rejected"}})
+    await q.message.reply_text("Rejected")
+
+async def sendkey(update, context):
+    if not is_admin(update.effective_user.id): return
+    oid = context.args[0]
+    key = " ".join(context.args[1:])
+    o = orders.find_one({"_id": oid})
+    await context.bot.send_message(o["user"], f"Your Key:\n{key}")
+    orders.update_one({"_id": oid}, {"$set": {"status": "delivered"}})
+
 # ==========================================
 
 # ================= MAIN ====================
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("refer", refer))
-app.add_handler(CommandHandler("balance", balance))
-app.add_handler(CommandHandler("redeem", redeem))
-app.add_handler(CommandHandler("addproduct", add_product))
+app.add_handler(CommandHandler("adminorders", admin_orders))
+app.add_handler(CommandHandler("sendkey", sendkey))
 
-app.add_handler(CallbackQueryHandler(referral_button, pattern="^get_ref$"))
-app.add_handler(CallbackQueryHandler(balance_button, pattern="^btn_balance$"))
-app.add_handler(CallbackQueryHandler(redeem_button, pattern="^btn_redeem$"))
-app.add_handler(CallbackQueryHandler(reward_button, pattern="^btn_reward$"))
-app.add_handler(CallbackQueryHandler(premium_button, pattern="^btn_premium$"))
-app.add_handler(CallbackQueryHandler(redeem_callback, pattern="^redeem_"))
-app.add_handler(CallbackQueryHandler(buy_menu, pattern="^buy_menu$"))
-app.add_handler(CallbackQueryHandler(buy_product, pattern="^buy_"))
+app.add_handler(CallbackQueryHandler(referral, "^ref$"))
+app.add_handler(CallbackQueryHandler(balance, "^bal$"))
+app.add_handler(CallbackQueryHandler(redeem, "^redeem$"))
+app.add_handler(CallbackQueryHandler(redeem_do, "^rd_"))
+app.add_handler(CallbackQueryHandler(reward, "^reward$"))
+app.add_handler(CallbackQueryHandler(premium, "^premium$"))
+app.add_handler(CallbackQueryHandler(buy_menu, "^buy_menu$"))
+app.add_handler(CallbackQueryHandler(buy_product, "^buy_"))
+app.add_handler(CallbackQueryHandler(paid, "^paid_"))
+app.add_handler(CallbackQueryHandler(admin_view, "^adm_"))
+app.add_handler(CallbackQueryHandler(approve, "^ok_"))
+app.add_handler(CallbackQueryHandler(reject, "^rej_"))
 
-print("✅ Reward Bot with MongoDB Running")
+print("✅ BOT RUNNING")
 app.run_polling()
-# ==========================================
