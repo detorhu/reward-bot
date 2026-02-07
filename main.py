@@ -14,7 +14,7 @@ REF_POINTS = 5
 MIN_REWARD_POINTS = 100
 
 UPI_ID = "avanishpal080@oksbi"
-QR_IMAGE_URL = "https://github.com/detorhu/reward-bot/qr.png"
+DEFAULT_QR = "https://raw.githubusercontent.com/USERNAME/REPO/main/qr.png"
 # =========================================
 
 # ================= DB =====================
@@ -25,11 +25,23 @@ users = db.users
 rewards = db.rewards
 products = db.products
 orders = db.orders
+settings = db.settings
 # =========================================
 
 # ================= HELPERS =================
 def is_admin(uid):
     return uid == ADMIN_ID
+
+def get_qr():
+    s = settings.find_one({"_id": "qr"})
+    return s["url"] if s else DEFAULT_QR
+
+def set_qr(url):
+    settings.update_one(
+        {"_id": "qr"},
+        {"$set": {"url": url}},
+        upsert=True
+    )
 
 def get_user(uid, username=None):
     user = users.find_one({"_id": uid})
@@ -54,7 +66,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.args:
         try:
             ref = int(context.args[0])
-            if ref != u.id and user["referred_by"] is None:
+            if ref != u.id and user.get("referred_by") is None:
                 get_user(ref)
                 users.update_one({"_id": u.id}, {"$set": {"referred_by": ref}})
                 users.update_one(
@@ -113,13 +125,13 @@ async def reward(update, context):
     u = get_user(q.from_user.id)
 
     if u["points"] < MIN_REWARD_POINTS:
-        await q.message.reply_text("Need 100 points")
+        await q.message.reply_text("❌ Need 100 points")
         return
 
     users.update_one({"_id": u["_id"]}, {"$inc": {"points": -MIN_REWARD_POINTS}})
     rewards.insert_one({"user": u["_id"], "amount": 50, "status": "pending"})
 
-    await q.message.reply_text("Reward requested")
+    await q.message.reply_text("✅ Reward requested")
     await context.bot.send_message(ADMIN_ID, f"Reward request from {u['_id']}")
 # ==========================================
 
@@ -157,7 +169,7 @@ async def buy_menu(update, context):
         kb.append([
             InlineKeyboardButton(
                 f"{p['name']} – ₹{p['cash_price']}",
-                callback_data=f"buy_prod_{p['_id']}"
+                callback_data=f"buy_{p['_id']}"
             )
         ])
 
@@ -167,14 +179,12 @@ async def buy_product(update, context):
     q = update.callback_query
     await q.answer()
 
-    pid = q.data.replace("buy_prod_", "")
+    pid = q.data.replace("buy_", "")
     p = products.find_one({"_id": pid})
     u = get_user(q.from_user.id)
 
     discount = min(u["points"], p["max_points_discount"])
     final = p["cash_price"] - discount
-
-    users.update_one({"_id": u["_id"]}, {"$inc": {"points": -discount}})
 
     oid = f"ord_{int(time.time())}"
     orders.insert_one({
@@ -188,7 +198,7 @@ async def buy_product(update, context):
 
     kb = [[InlineKeyboardButton("I Have Paid", callback_data=f"paid_{oid}")]]
     await q.message.reply_photo(
-        QR_IMAGE_URL,
+        photo=get_qr(),
         caption=f"Pay ₹{final}\nUPI: {UPI_ID}",
         reply_markup=InlineKeyboardMarkup(kb)
     )
@@ -204,10 +214,17 @@ async def paid(update, context):
 
 # ================= ADMIN ==================
 async def admin_orders(update, context):
-    if not is_admin(update.effective_user.id): return
+    if not is_admin(update.effective_user.id):
+        return
+
     kb = []
     for o in orders.find({"status": "submitted"}):
-        kb.append([InlineKeyboardButton(o["product"], callback_data=f"adm_{o['_id']}")])
+        kb.append([
+            InlineKeyboardButton(
+                f"{o['product']} ₹{o['price']}",
+                callback_data=f"adm_{o['_id']}"
+            )
+        ])
     await update.message.reply_text("Orders:", reply_markup=InlineKeyboardMarkup(kb))
 
 async def admin_view(update, context):
@@ -224,6 +241,13 @@ async def approve(update, context):
     q = update.callback_query
     await q.answer()
     oid = q.data.replace("ok_", "")
+    o = orders.find_one({"_id": oid})
+
+    users.update_one(
+        {"_id": o["user"]},
+        {"$inc": {"points": -o["discount"]}}
+    )
+
     orders.update_one({"_id": oid}, {"$set": {"status": "approved"}})
     await q.message.reply_text("Approved. Use /sendkey <order_id> KEY")
 
@@ -232,25 +256,50 @@ async def reject(update, context):
     await q.answer()
     oid = q.data.replace("rej_", "")
     o = orders.find_one({"_id": oid})
-    if o:
-        users.update_one({"_id": o["user"]}, {"$inc": {"points": o["discount"]}})
+
+    users.update_one(
+        {"_id": o["user"]},
+        {"$inc": {"points": o["discount"]}}
+    )
+
     orders.update_one({"_id": oid}, {"$set": {"status": "rejected"}})
     await q.message.reply_text("Rejected & points refunded")
 
 async def sendkey(update, context):
-    if not is_admin(update.effective_user.id): return
+    if not is_admin(update.effective_user.id):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("Usage: /sendkey <order_id> KEY")
+        return
+
     oid = context.args[0]
     key = " ".join(context.args[1:])
     o = orders.find_one({"_id": oid})
+
     await context.bot.send_message(o["user"], f"Your Key:\n{key}")
     orders.update_one({"_id": oid}, {"$set": {"status": "delivered"}})
+# ==========================================
 
 # ================= ADD PRODUCT ============
-async def addproduct(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id): return
-    name = context.args[0]
-    price = int(context.args[1])
-    discount = int(context.args[2])
+async def addproduct(update, context):
+    if not is_admin(update.effective_user.id):
+        return
+
+    if len(context.args) < 3:
+        await update.message.reply_text(
+            "Usage:\n/addproduct <name> <price> <max_discount>"
+        )
+        return
+
+    try:
+        name = context.args[0]
+        price = int(context.args[1])
+        discount = int(context.args[2])
+    except ValueError:
+        await update.message.reply_text("Price & discount must be numbers")
+        return
+
     products.insert_one({
         "_id": f"prod_{int(time.time())}",
         "name": name,
@@ -258,7 +307,21 @@ async def addproduct(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "max_points_discount": discount,
         "active": True
     })
-    await update.message.reply_text("Product added")
+
+    await update.message.reply_text("✅ Product added")
+# ==========================================
+
+# ================= SET QR =================
+async def setqr(update, context):
+    if not is_admin(update.effective_user.id):
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /setqr <RAW_IMAGE_URL>")
+        return
+
+    set_qr(context.args[0])
+    await update.message.reply_text("✅ QR updated")
 # ==========================================
 
 # ================= MAIN ====================
@@ -268,6 +331,7 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("adminorders", admin_orders))
 app.add_handler(CommandHandler("sendkey", sendkey))
 app.add_handler(CommandHandler("addproduct", addproduct))
+app.add_handler(CommandHandler("setqr", setqr))
 
 app.add_handler(CallbackQueryHandler(referral, "^ref$"))
 app.add_handler(CallbackQueryHandler(balance, "^bal$"))
@@ -276,7 +340,7 @@ app.add_handler(CallbackQueryHandler(redeem_do, "^rd_"))
 app.add_handler(CallbackQueryHandler(reward, "^reward$"))
 app.add_handler(CallbackQueryHandler(premium, "^premium$"))
 app.add_handler(CallbackQueryHandler(buy_menu, "^buy_menu$"))
-app.add_handler(CallbackQueryHandler(buy_product, "^buy_prod_"))
+app.add_handler(CallbackQueryHandler(buy_product, "^buy_"))
 app.add_handler(CallbackQueryHandler(paid, "^paid_"))
 app.add_handler(CallbackQueryHandler(admin_view, "^adm_"))
 app.add_handler(CallbackQueryHandler(approve, "^ok_"))
