@@ -457,42 +457,58 @@ async def setqr(update, context):
 # ================= MAIN ====================
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+# 🔹 GLOBAL SHARED DATA
 app.bot_data["db"] = db
 app.bot_data["ADMIN_ID"] = ADMIN_ID
 
+# ================= COMMAND HANDLERS =================
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("adminorders", admin_orders))
+app.add_handler(CommandHandler("adminredeems", admin_redeems))
 app.add_handler(CommandHandler("sendkey", sendkey))
 app.add_handler(CommandHandler("addproduct", addproduct))
 app.add_handler(CommandHandler("delproduct", delproduct))
 app.add_handler(CommandHandler("setqr", setqr))
 app.add_handler(CommandHandler("products", list_products))
 
+# ================= CALLBACK HANDLERS (ORDER MATTERS) =================
+
+# 🔗 BASIC
 app.add_handler(CallbackQueryHandler(referral, "^ref$"))
+app.add_handler(CallbackQueryHandler(premium, "^premium$"))
+
+# 👤 PROFILE (TOP PRIORITY)
+app.add_handler(CallbackQueryHandler(profile, "^profile$"))
+app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
+app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
+
+# 🛒 REDEEM
 app.add_handler(CallbackQueryHandler(redeem_menu, "^redeem$"))
 app.add_handler(CallbackQueryHandler(redeem_reward, "^redeem_reward$"))
 app.add_handler(CallbackQueryHandler(redeem_recharge, "^redeem_recharge$"))
 app.add_handler(CallbackQueryHandler(redeem_cash, "^redeem_cash$"))
 app.add_handler(CallbackQueryHandler(redeem_custom, "^redeem_custom$"))
-app.add_handler(CommandHandler("adminredeems", admin_redeems))
+
+# 🧾 ADMIN REDEEM FLOW
 app.add_handler(CallbackQueryHandler(redeem_view, "^redeem_view_"))
 app.add_handler(CallbackQueryHandler(redeem_approve, "^redeem_ok_"))
 app.add_handler(CallbackQueryHandler(redeem_reject, "^redeem_rej_"))
-app.add_handler(CallbackQueryHandler(reward_menu, "^reward$"))
-app.add_handler(CallbackQueryHandler(premium, "^premium$"))
+
+# 🛍 BUY FLOW
 app.add_handler(CallbackQueryHandler(buy_menu, "^buy_menu$"))
 app.add_handler(CallbackQueryHandler(buy_product, r"^buy_prod_"))
 app.add_handler(CallbackQueryHandler(paid, "^paid_"))
+
+# 🛠 ADMIN ORDERS
 app.add_handler(CallbackQueryHandler(admin_view, "^adm_"))
 app.add_handler(CallbackQueryHandler(approve, "^ok_"))
 app.add_handler(CallbackQueryHandler(reject, "^rej_"))
-app.add_handler(CallbackQueryHandler(profile, "^profile$"))
-app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
-app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
+
+# 🔙 BACK TO MAIN
 app.add_handler(CallbackQueryHandler(start_back, "^start_back$"))
-app.add_handler(
-    MessageHandler(filters.PHOTO, receive_payment_proof)
-)
+
+# 📸 PAYMENT SCREENSHOT (VERY LAST)
+app.add_handler(MessageHandler(filters.PHOTO, receive_payment_proof))
 
 print("✅ BOT RUNNING")
 app.run_polling()
