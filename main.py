@@ -1,3 +1,5 @@
+from modules.payment_proof import receive_payment_proof
+from telegram.ext import MessageHandler, filters
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from pymongo import MongoClient
@@ -231,12 +233,25 @@ async def paid(update, context):
         await q.message.reply_text("❌ Invalid order")
         return
 
-    orders.update_one({"_id": oid}, {"$set": {"status": "submitted"}})
-    await q.message.reply_text("✅ Payment submitted. Await admin approval")
+    # Order status update
+    orders.update_one(
+        {"_id": oid},
+        {"$set": {"status": "submitted"}}
+    )
+
+    # 🔥 Screenshot ke liye flag set
+    context.user_data["waiting_for_screenshot"] = oid
+
+    await q.message.reply_text(
+        "📸 *Payment Screenshot bhejo*\n\n"
+        "UPI payment ka screenshot isi chat me send karo.\n"
+        "Admin verify karega.",
+        parse_mode="Markdown"
+    )
 
     await context.bot.send_message(
         ADMIN_ID,
-        f"🧾 New payment submitted\nOrder ID: {oid}"
+        f"🧾 New payment submitted\nOrder ID: {oid}\n\nWaiting for screenshot 📸"
     )
 # ==========================================
 
@@ -363,6 +378,7 @@ async def setqr(update, context):
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.bot_data["db"] = db
+app.bot_data["ADMIN_ID"] = ADMIN_ID
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("adminorders", admin_orders))
@@ -384,6 +400,9 @@ app.add_handler(CallbackQueryHandler(profile_menu, "^profile$"))
 app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
 app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
 app.add_handler(CallbackQueryHandler(start_back, "^start_back$"))
+app.add_handler(
+    MessageHandler(filters.PHOTO, receive_payment_proof)
+)
 
 print("✅ BOT RUNNING")
 app.run_polling()
