@@ -13,7 +13,7 @@ DB_NAME = "reward_bot"
 REF_POINTS = 5
 MIN_REWARD_POINTS = 100
 
-UPI_ID = "yourupi@upi"
+UPI_ID = "avanishpal080@oksbi"
 QR_IMAGE_URL = "https://example.com/qr.png"
 # =========================================
 
