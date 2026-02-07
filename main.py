@@ -19,6 +19,7 @@ from modules.redeem import (
 )
 from modules.reward import reward_menu
 from modules.profile import (
+    profile,              # 👈 NEW (IMPORTANT)
     profile_menu,
     profile_orders,
     profile_referrals
@@ -485,7 +486,7 @@ app.add_handler(CallbackQueryHandler(paid, "^paid_"))
 app.add_handler(CallbackQueryHandler(admin_view, "^adm_"))
 app.add_handler(CallbackQueryHandler(approve, "^ok_"))
 app.add_handler(CallbackQueryHandler(reject, "^rej_"))
-app.add_handler(CallbackQueryHandler(profile_menu, "^profile$"))
+app.add_handler(CallbackQueryHandler(profile, "^profile$"))
 app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
 app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
 app.add_handler(CallbackQueryHandler(start_back, "^start_back$"))
