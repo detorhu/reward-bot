@@ -1,17 +1,19 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from telegram.constants import ParseMode
 import time
 
-# ================= PROFILE ENTRY (WRAPPER) =================
+# ================= PROFILE ENTRY =================
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await profile_menu(update, context)
+
 # ================= PROFILE MENU =================
 async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if db is None:
+    if not db:
         await q.message.edit_text("❌ Database connection error.")
         return
 
@@ -23,6 +25,9 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.message.edit_text("❌ User profile not found.")
         return
 
+    username = user.get("username")
+    username_text = f"@{username}" if username else "Not set"
+
     total_orders = orders.count_documents({"user": q.from_user.id})
     completed_orders = orders.count_documents(
         {"user": q.from_user.id, "status": "delivered"}
@@ -32,14 +37,14 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     joined_date = time.strftime("%d %b %Y", time.localtime(joined_time))
 
     text = (
-        "👤 *Your Profile*\n\n"
-        f"🆔 User ID: `{user['_id']}`\n"
-        f"👤 Username: @{user.get('username', 'Not set')}\n\n"
-        f"💰 Points Balance: {user.get('points', 0)}\n"
-        f"👥 Total Referrals: {user.get('referrals', 0)}\n\n"
-        f"🛒 Total Orders: {total_orders}\n"
-        f"✅ Completed Orders: {completed_orders}\n\n"
-        f"📅 Joined On: {joined_date}"
+        "👤 <b>Your Profile</b>\n\n"
+        f"🆔 <b>User ID:</b> <code>{user['_id']}</code>\n"
+        f"👤 <b>Username:</b> {username_text}\n\n"
+        f"💰 <b>Points Balance:</b> {user.get('points', 0)}\n"
+        f"👥 <b>Total Referrals:</b> {user.get('referrals', 0)}\n\n"
+        f"🛒 <b>Total Orders:</b> {total_orders}\n"
+        f"✅ <b>Completed Orders:</b> {completed_orders}\n\n"
+        f"📅 <b>Joined On:</b> {joined_date}"
     )
 
     kb = [
@@ -50,7 +55,7 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await q.message.edit_text(
         text,
-        parse_mode="Markdown",
+        parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
@@ -60,23 +65,23 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if db is None:
+    if not db:
         await q.message.edit_text("❌ Database error.")
         return
 
     orders = db.orders
     cursor = orders.find({"user": q.from_user.id}).sort("_id", -1).limit(10)
 
-    text = "🛒 *Your Recent Orders*\n\n"
+    text = "🛒 <b>Your Recent Orders</b>\n\n"
     found = False
 
     for o in cursor:
         found = True
         text += (
-            f"📦 Product: {o['product']}\n"
-            f"💰 Price: ₹{o['price']}\n"
-            f"🎯 Discount Used: {o.get('discount', 0)}\n"
-            f"📌 Status: *{o['status']}*\n\n"
+            f"📦 <b>Product:</b> {o['product']}\n"
+            f"💰 <b>Price:</b> ₹{o['price']}\n"
+            f"🎯 <b>Discount Used:</b> {o.get('discount', 0)}\n"
+            f"📌 <b>Status:</b> {o['status']}\n\n"
         )
 
     if not found:
@@ -86,7 +91,7 @@ async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await q.message.edit_text(
         text,
-        parse_mode="Markdown",
+        parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
@@ -96,7 +101,7 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     db = context.application.bot_data.get("db")
-    if db is None:
+    if not db:
         await q.message.edit_text("❌ Database error.")
         return
 
@@ -108,13 +113,13 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     referred_by = user.get("referred_by")
-    referred_text = f"`{referred_by}`" if referred_by else "No one (Direct user)"
+    referred_text = f"<code>{referred_by}</code>" if referred_by else "No one (Direct user)"
 
     text = (
-        "👥 *Referral Information*\n\n"
-        f"👤 Referred By: {referred_text}\n"
-        f"👥 Total Referrals: {user.get('referrals', 0)}\n"
-        f"💰 Points Earned from Referrals: {user.get('referrals', 0) * 5}\n\n"
+        "👥 <b>Referral Information</b>\n\n"
+        f"👤 <b>Referred By:</b> {referred_text}\n"
+        f"👥 <b>Total Referrals:</b> {user.get('referrals', 0)}\n"
+        f"💰 <b>Points Earned:</b> {user.get('referrals', 0) * 5}\n\n"
         "Invite more users to earn more points."
     )
 
@@ -122,6 +127,6 @@ async def profile_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await q.message.edit_text(
         text,
-        parse_mode="Markdown",
+        parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(kb)
-        )
+                      )
