@@ -481,7 +481,8 @@ app.add_handler(CallbackQueryHandler(premium, "^premium$"))
 app.add_handler(CallbackQueryHandler(profile, "^profile$"))
 app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
 app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
-
+# 💸 REWARD (MISSING FIX)
+app.add_handler(CallbackQueryHandler(reward_menu, "^reward$"))
 # 🛒 REDEEM
 app.add_handler(CallbackQueryHandler(redeem_menu, "^redeem$"))
 app.add_handler(CallbackQueryHandler(redeem_reward, "^redeem_reward$"))
