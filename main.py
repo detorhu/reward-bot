@@ -477,9 +477,9 @@ app.add_handler(CallbackQueryHandler(referral, "^ref$"))
 app.add_handler(CallbackQueryHandler(premium, "^premium$"))
 
 # 👤 PROFILE (TOP PRIORITY)
-app.add_handler(CallbackQueryHandler(profile, "^profile$"))
-app.add_handler(CallbackQueryHandler(profile_orders, "^profile_orders$"))
-app.add_handler(CallbackQueryHandler(profile_referrals, "^profile_referrals$"))
+app.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
+app.add_handler(CallbackQueryHandler(profile_orders, pattern="^profile_orders$"))
+app.add_handler(CallbackQueryHandler(profile_referrals, pattern="^profile_referrals$"))
 # 💸 REWARD (MISSING FIX)
 app.add_handler(CallbackQueryHandler(reward_menu, "^reward$"))
 # 🛒 REDEEM
