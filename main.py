@@ -9,12 +9,12 @@ import time
 # ================= CONFIG =================
 BOT_TOKEN = "8096328605:AAEsi9pXGY_5SK9-Y9TtZVh0SQv8W0zpMRE"
 ADMIN_ID = 7066124462
-MONGO_URI = "mongodb+srv://neonman242:deadman242@game0.sqfzcd4.mongodb.net/?appName=game0"
+MONGO_URI = "mongodb+srv://neonman242:deadman242@game0.sqfzcd4.mongodb.net/reward_bot?retryWrites=true&w=majority"
 DB_NAME = "reward_bot"
 
 REF_POINTS = 5
 PREMIUM_MULTIPLIER = 2
-MIN_REWARD_POINTS = 100   # 100 pts = ₹50 (manual)
+MIN_REWARD_POINTS = 100
 # =========================================
 
 # ================= DB =====================
@@ -70,29 +70,48 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
+    kb = [
+        [InlineKeyboardButton("🔗 Get Referral Link", callback_data="get_ref")]
+    ]
+
     text = (
         "👋 *Welcome to Rewards Bot*\n\n"
         "🎁 Refer friends & earn points\n"
         "🛒 Redeem points for digital rewards\n"
         "💎 Premium available\n\n"
-        "📌 Commands:\n"
-        "/refer – referral link\n"
-        "/balance – points\n"
-        "/redeem – store\n"
-        "/reward – reward request\n"
-        "/premium – premium info"
+        "👇 Use the button below:"
     )
-    await update.message.reply_text(text, parse_mode="Markdown")
+
+    await update.message.reply_text(
+        text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(kb)
+    )
 # ==========================================
 
 
-# ================= REFER ===================
+# ================= INLINE REF BUTTON ======
+async def referral_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    uid = q.from_user.id
+    link = f"https://t.me/{context.bot.username}?start={uid}"
+
+    await q.message.reply_text(
+        f"🔗 *Your Referral Link:*\n{link}\n\n"
+        "Share this link with friends 👥",
+        parse_mode="Markdown"
+    )
+# ==========================================
+
+
+# ================= REFER (COMMAND BACKUP) ==
 async def refer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     link = f"https://t.me/{context.bot.username}?start={uid}"
     await update.message.reply_text(
-        f"🔗 *Your Referral Link:*\n{link}\n\n"
-        "Invite friends to earn points",
+        f"🔗 *Your Referral Link:*\n{link}",
         parse_mode="Markdown"
     )
 # ==========================================
@@ -136,9 +155,7 @@ async def redeem_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     users.update_one({"_id": uid}, {"$inc": {"points": -cost}})
 
-    await q.message.reply_text(
-        "✅ Redeem request sent.\nAdmin will deliver shortly."
-    )
+    await q.message.reply_text("✅ Redeem request sent.\nAdmin will deliver shortly.")
 
     await context.bot.send_message(
         ADMIN_ID,
@@ -155,8 +172,7 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user["points"] < MIN_REWARD_POINTS:
         await update.message.reply_text(
-            "❌ Minimum 100 points required.\n"
-            "Rewards are subject to verification."
+            "❌ Minimum 100 points required.\nRewards are subject to verification."
         )
         return
 
@@ -168,10 +184,7 @@ async def reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "status": "pending"
     })
 
-    await update.message.reply_text(
-        "✅ Reward request submitted.\n"
-        "⏳ Manual review in progress."
-    )
+    await update.message.reply_text("✅ Reward request submitted.\n⏳ Manual review in progress.")
 
     await context.bot.send_message(
         ADMIN_ID,
@@ -210,16 +223,6 @@ async def addad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = " ".join(context.args)
     ads.insert_one({"text": text})
     await update.message.reply_text("✅ Ad added")
-
-
-async def show_ad(context):
-    ad = ads.find_one()
-    if ad:
-        for u in users.find():
-            try:
-                await context.bot.send_message(u["_id"], f"📢 Sponsored:\n{ad['text']}")
-            except:
-                pass
 # ==========================================
 
 
@@ -241,7 +244,8 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("refer", refer))
 app.add_handler(CommandHandler("balance", balance))
 app.add_handler(CommandHandler("redeem", redeem))
-app.add_handler(CallbackQueryHandler(redeem_callback))
+app.add_handler(CallbackQueryHandler(redeem_callback, pattern="^redeem_"))
+app.add_handler(CallbackQueryHandler(referral_button, pattern="^get_ref$"))
 app.add_handler(CommandHandler("reward", reward))
 app.add_handler(CommandHandler("premium", premium))
 app.add_handler(CommandHandler("addpremium", addpremium))
