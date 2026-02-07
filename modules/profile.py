@@ -46,12 +46,11 @@ async def profile_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 Back to Menu", callback_data="start_back")]
     ]
 
-    await q.message.reply_text(
-        text,
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(kb)
+    await q.message.edit_text(
+    text,
+    parse_mode="Markdown",
+    reply_markup=InlineKeyboardMarkup(kb)
     )
-
 
 # ================= ORDER HISTORY =================
 async def profile_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
