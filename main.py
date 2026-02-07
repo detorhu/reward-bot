@@ -335,6 +335,8 @@ async def setqr(update, context):
 # ================= MAIN ====================
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+app.bot_data["db"] = db
+
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("adminorders", admin_orders))
 app.add_handler(CommandHandler("sendkey", sendkey))
